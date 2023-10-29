@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <button id="connectButton">Connect</button>
+    <button id="disconnectButton" disabled>Disconnect</button>
+    <input type="text" id="messageInput" placeholder="Enter a message">
+    <button id="sendMessageButton" disabled>Send Message</button>
+    <div id="messageLog"></div>
+
+    <script>
+        const messageLog = document.getElementById('messageLog');
+        const connectButton = document.getElementById('connectButton');
+        const disconnectButton = document.getElementById('disconnectButton');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        let socket;
+
+        // Function to add a message to the log
+        function addToLog(message) {
+            messageLog.innerHTML += `<p>${message}</p>`;
+        }
+
+        // Function to connect to the WebSocket
+        connectButton.addEventListener('click', () => {
+            socket = new WebSocket('ws://localhost:8000/ws/task-status/'); // Replace with your WebSocket URL
+            socket.onopen = () => {
+                addToLog('WebSocket connection established');
+                connectButton.disabled = true;
+                disconnectButton.disabled = false;
+                sendMessageButton.disabled = false;
+            };
+            socket.onmessage = (event) => {
+                addToLog(`Received: ${event.data}`);
+            };
+            socket.onclose = () => {
+                addToLog('WebSocket connection closed');
+                connectButton.disabled = false;
+                disconnectButton.disabled = true;
+                sendMessageButton.disabled = true;
+            };
+        });
+
+        // Function to disconnect from the WebSocket
+        disconnectButton.addEventListener('click', () => {
+            socket.close();
+        });
+
+        // Function to send a message
+        sendMessageButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            socket.send(message);
+            addToLog(`Sent: ${message}`);
+            messageInput.value = '';
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a Django Task Manager on a t2.micro EC2 instance in us-east-1
+
+Resources:
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t2.micro
+      KeyName: 'myrsa2'  # Replace with your key pair name
+      SubnetId: 'subnet-007c0bc416cd151c5'  # Use the specific subnet ID
+      ImageId: 'ami-0fc5d935ebf8bc3bc'  # Ubuntu Server 22.04 LTS (ARM) in us-east-1
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          apt-get update -y
+          apt-get install -y docker.io
+          service docker start
+          docker run -d -p 80:8000 root0877/taskmanager:v1.0
+
+
