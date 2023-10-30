@@ -1,0 +1,29 @@
+---
+- name: Deploy Task Manager Application
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+
+    - name: Pull Task Manager Docker image
+      docker_image:
+        name: root0877/taskmanager:v1.0
+        source: pull
+
+    - name: Run Task Manager Docker container
+      docker_container:
+        name: taskmanager
+        image: root0877/taskmanager:v1.0
+        state: started
+        ports:
+          - "80:8000"

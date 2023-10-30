@@ -25,13 +25,6 @@ Resources:
       ImageId: 'ami-0fc5d935ebf8bc3bc'  # Ubuntu Server 22.04 LTS (ARM) in us-east-1
       SecurityGroupIds:
         - !GetAtt SecurityGroup.GroupId  # Reference the security group
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          apt-get update -y
-          apt-get install -y docker.io
-          service docker start
-          docker run -d -p 80:8000 root0877/taskmanager:v1.0
 
 Outputs:
   InstanceId:
