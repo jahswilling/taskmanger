@@ -22,8 +22,7 @@ jobs:
 
       - name: Deploy CloudFormation Stack
         run: |
-          aws cloudformation deploy --stack-name TaskManagerStack --template-body file://cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM --region us-east-1
-        working-directory: .github/workflows
+          aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
 
       - name: Get EC2 Public IP
         id: ec2-info
@@ -31,7 +30,6 @@ jobs:
           public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
           echo "Public IP: $public_ip"
           echo "::set-output name=public_ip::$public_ip"
-        working-directory: .github/workflows
 
       - name: Run Ansible Playbook
         env:
@@ -39,4 +37,3 @@ jobs:
         run: |
           echo "EC2 Public IP: $EC2_PUBLIC_IP"
           ansible-playbook -i $EC2_PUBLIC_IP, deploy_taskmanager.yml
-        working-directory: .github/workflows
