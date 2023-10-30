@@ -85,13 +85,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Create Email Content File
+        run: | 
+            echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
+        env:
+            EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+        
       - name: Install msmtp
         run: sudo apt-get update && sudo apt-get install -y msmtp
 
       - name: Send Email
         run: |
-            EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
-            email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
-            echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
-        env:
-            EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+            cat email_body.txt | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com        
