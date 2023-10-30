@@ -32,7 +32,7 @@ SECRET_KEY = '6!a6xb^va8(m%esk_ap*+%f+#_ycc@ndhy13$-ymoq_g)&2%qn'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*",'http://localhost:3000']
+ALLOWED_HOSTS = ["*",'http://localhost']
 
 
 # Application definition

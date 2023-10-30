@@ -2,6 +2,20 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a Django Task Manager on a t2.micro EC2 instance in us-east-1
 
 Resources:
+  SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for the Django Task Manager EC2 instance'
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+
   EC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -9,6 +23,8 @@ Resources:
       KeyName: 'myrsa2'  # Replace with your key pair name
       SubnetId: 'subnet-007c0bc416cd151c5'  # Use the specific subnet ID
       ImageId: 'ami-0fc5d935ebf8bc3bc'  # Ubuntu Server 22.04 LTS (ARM) in us-east-1
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId  # Reference the security group
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
@@ -17,4 +33,9 @@ Resources:
           service docker start
           docker run -d -p 80:8000 root0877/taskmanager:v1.0
 
-
+Outputs:
+  InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'

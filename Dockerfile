@@ -11,13 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your Django application code into the container
 COPY . /app/
 
-RUN pip install channels
-
-# Install Daphne and any other necessary dependencies
-RUN pip install daphne
-
-# Expose port 8000 (Daphne's default port)
+# Expose port 8000
 EXPOSE 8000
 
-# Start Daphne to serve the Django Channels application
-CMD ["daphne", "taskmanager.asgi:application"]
+# Start the Django application with "python3 manage.py runserver"
+CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
