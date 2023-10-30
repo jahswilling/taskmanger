@@ -90,8 +90,9 @@ jobs:
       
       - name: Send Email
         run: |
-          EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
-          echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" | mail -s "EC2 IP Address" -r triggerapp.info@gmail.com -S smtp="smtp.gmail.com:587" -S smtp-use-starttls -S smtp-auth=login -S smtp-auth-user=triggerapp.info@gmail.com -S smtp-auth-password="${{ secrets.EMAIL_PASSWORD }}" jahswilling@gmail.com
+            EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+            echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email.txt
+            mail -s "EC2 IP Address" -r triggerapp.info@gmail.com jahswilling@gmail.com < email.txt
         env:
           EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
       
