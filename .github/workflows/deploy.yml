@@ -22,7 +22,7 @@ jobs:
 
       - name: Deploy CloudFormation Stack
         run: |
-          aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
+          aws cloudformation deploy --stack-name TaskManagerStack --template-body file://cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM --region us-east-1
         working-directory: .github/workflows
 
       - name: Get EC2 Public IP
