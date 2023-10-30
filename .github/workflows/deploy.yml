@@ -40,12 +40,6 @@ jobs:
                 sleep 30  # Adjust the sleep interval as needed
                 fi
             done
-
-  deploy_ansible:
-    needs: deploy_cloudformation
-    runs-on: ubuntu-latest
-
-    steps:
       - name: Get EC2 Public IP
         id: ec2-info
         run: |
@@ -57,6 +51,11 @@ jobs:
             fi
             echo "::set-output name=public_ip::$public_ip"
 
+  deploy_ansible:
+    needs: deploy_cloudformation
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Set up SSH Key
         id: set-ssh-key
         run: |
