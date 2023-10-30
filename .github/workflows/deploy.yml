@@ -27,12 +27,6 @@ jobs:
                 echo "CloudFormation deployment failed."
                 exit 1
             fi
-
-  wait_for_ec2:
-    needs: deploy_cloudformation
-    runs-on: ubuntu-latest
-
-    steps:
       - name: Wait for EC2 instances to be running
         run: |
             stack_name="TaskManagerStack"
@@ -48,7 +42,7 @@ jobs:
             done
 
   deploy_ansible:
-    needs: wait_for_ec2
+    needs: deploy_cloudformation
     runs-on: ubuntu-latest
 
     steps:
