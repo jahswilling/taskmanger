@@ -20,7 +20,7 @@ Resources:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: t2.micro
-      KeyName: 'myrsa2'  # Replace with your key pair name
+      KeyName: 'taskmanager'  # Replace with your key pair name
       SubnetId: 'subnet-007c0bc416cd151c5'  # Use the specific subnet ID
       ImageId: 'ami-0fc5d935ebf8bc3bc'  # Ubuntu Server 22.04 LTS (ARM) in us-east-1
       SecurityGroupIds:
