@@ -5,20 +5,28 @@
   environment:
     ANSIBLE_HOST_KEY_CHECKING: False  # Disable SSH host key checking
   tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+      become: yes
+
     - name: Install Docker
       apt:
         name: docker.io
         state: present
+      become: yes
 
     - name: Start Docker service
       service:
         name: docker
         state: started
+      become: yes
 
     - name: Pull Task Manager Docker image
       docker_image:
         name: root0877/taskmanager:latest
         source: pull
+      become: yes
 
     - name: Run Task Manager Docker container
       docker_container:
@@ -27,3 +35,4 @@
         state: started
         ports:
           - "80:8000"
+      become: yes

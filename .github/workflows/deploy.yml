@@ -42,9 +42,9 @@ jobs:
       - name: Set up SSH Key
         id: set-ssh-key
         run: |
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
-            chmod 600 private_key.pem
-            if [ ! -f private_key.pem ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > taskmanager.pem
+            chmod 600 taskmanager.pem
+            if [ ! -f taskmanager.pem ]; then
               echo "Failed to set up SSH private key."
               exit 1
             fi
@@ -54,8 +54,14 @@ jobs:
           EC2_PUBLIC_IP: ${{ steps.ec2-info.outputs.public_ip }}
         run: |
           echo "EC2 Public IP: $EC2_PUBLIC_IP"
-          ansible-playbook -i $EC2_PUBLIC_IP, deploy_taskmanager.yml --private-key private_key.pem
+          ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem
           if [ $? -ne 0 ]; then
             echo "Ansible playbook execution failed."
             exit 1
           fi
+        
+      - name: Send Email
+        run: |
+          echo "EC2 Public IP: $EC2_PUBLIC_IP" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
+        env:
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
