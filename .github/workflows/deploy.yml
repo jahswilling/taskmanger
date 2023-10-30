@@ -16,28 +16,28 @@ jobs:
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: us-east-1
 
       - name: Deploy CloudFormation Stack
         run: |
-          aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
-          if [ $? -ne 0 ]; then
-            echo "CloudFormation deployment failed."
-            exit 1
-          fi
+            aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
+            if [ $? -ne 0 ]; then
+                echo "CloudFormation deployment failed."
+                exit 1
+            fi
 
       - name: Get EC2 Public IP
         id: ec2-info
         run: |
-          public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "Public IP: $public_ip"
-          if [ -z "$public_ip" ]; then
-            echo "Failed to retrieve the EC2 public IP."
-            exit 1
-          fi
-          echo "::set-output name=public_ip::$public_ip"
+            public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+            echo "Public IP: $public_ip"
+            if [ -z "$public_ip" ]; then
+                echo "Failed to retrieve the EC2 public IP."
+                exit 1
+            fi
+            echo "::set-output name=public_ip::$public_ip"
 
       - name: Set up SSH Key
         id: set-ssh-key
@@ -45,23 +45,23 @@ jobs:
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > taskmanager.pem
             chmod 600 taskmanager.pem
             if [ ! -f taskmanager.pem ]; then
-              echo "Failed to set up SSH private key."
-              exit 1
+                echo "Failed to set up SSH private key."
+                exit 1
             fi
 
       - name: Run Ansible Playbook
         env:
-          EC2_PUBLIC_IP: ${{ steps.ec2-info.outputs.public_ip }}
+            EC2_PUBLIC_IP: ${{ steps.ec2-info.outputs.public_ip }}
         run: |
-          echo "EC2 Public IP: $EC2_PUBLIC_IP"
-          ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem
-          if [ $? -ne 0 ]; then
-            echo "Ansible playbook execution failed."
-            exit 1
-          fi
+            echo "EC2 Public IP: $EC2_PUBLIC_IP"
+            ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem
+            if [ $? -ne 0 ]; then
+                echo "Ansible playbook execution failed."
+                exit 1
+            fi
         
       - name: Send Email
         run: |
-          echo "EC2 Public IP: $EC2_PUBLIC_IP" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
+            echo "EC2 Public IP: $EC2_PUBLIC_IP" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
         env:
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+            EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
