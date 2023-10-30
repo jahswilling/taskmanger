@@ -1,9 +1,9 @@
 ---
 - name: Deploy Task Manager Application
   hosts: all
-  become: yes
   gather_facts: yes
-
+  environment:
+    ANSIBLE_HOST_KEY_CHECKING: False  # Disable SSH host key checking
   tasks:
     - name: Install Docker
       apt:
