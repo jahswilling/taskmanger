@@ -54,7 +54,7 @@ jobs:
             echo "Failed to retrieve the EC2 public IP."
             exit 1
           fi
-          echo "::set-env name=EC2_PUBLIC_IP::$public_ip"  # Set it as a global environment variable
+          echo "EC2_PUBLIC_IP=$public_ip" >> $GITHUB_ENV  # Set it as an environment variable
 
   deploy_ansible:
     needs: deploy_cloudformation
