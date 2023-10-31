@@ -46,7 +46,7 @@ jobs:
         id: ec2-info
         run: |
           public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "EC2_PUBLIC_IP=$public_ip" >> $GITHUB_ENV  # Set it as a global environment variable
+          echo $public_ip > ec2_ip.txt  # Write the IP address to a file
 
   deploy_ansible:
     needs: deploy_cloudformation
@@ -66,10 +66,14 @@ jobs:
             exit 1
           fi
 
+      - name: Get EC2 Public IP from File
+        run: |
+          EC2_PUBLIC_IP=$(cat ec2_ip.txt)
+          echo "EC2 Public IP: $EC2_PUBLIC_IP"
+
       - name: Run Ansible Playbook
         run: |
-          echo "EC2 Public IP: $EC2_PUBLIC_IP"
-          ansible-playbook -i ${{ env.EC2_PUBLIC_IP }}, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           if [ $? -ne 0 ]; then
             echo "Ansible playbook execution failed."
             exit 1
@@ -82,6 +86,7 @@ jobs:
     steps:
       - name: Create Email Content File
         run: | 
+          EC2_PUBLIC_IP=$(cat ec2_ip.txt)
           echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
         
       - name: Install msmtp
@@ -89,6 +94,6 @@ jobs:
 
       - name: Send Email
         run: |
-          EC2_PUBLIC_IP=${{ env.EC2_PUBLIC_IP }}
+          EC2_PUBLIC_IP=$(cat ec2_ip.txt)
           email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
           echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
