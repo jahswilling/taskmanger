@@ -45,7 +45,7 @@ jobs:
       - name: Get EC2 Public IP
         run: |
           public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "::set-output name=public_ip::$public_ip"
+          echo "EC2_PUBLIC_IP=$public_ip" >> $GITHUB_ENV  # Store EC2 public IP as an environment variable
 
       - name: Set up SSH Key
         run: |
@@ -58,7 +58,7 @@ jobs:
 
       - name: Run Ansible Playbook
         run: |
-          EC2_PUBLIC_IP=${{ steps.ec2-info.outputs.public_ip }}
+          EC2_PUBLIC_IP=$EC2_PUBLIC_IP  # Retrieve EC2 public IP from the environment
           echo "EC2 Public IP: $EC2_PUBLIC_IP"
           ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           if [ $? -ne 0 ]; then
@@ -68,7 +68,7 @@ jobs:
 
       - name: Create Email Content File
         run: | 
-          EC2_PUBLIC_IP=${{ steps.ec2-info.outputs.public_ip }}
+          EC2_PUBLIC_IP=$EC2_PUBLIC_IP  # Retrieve EC2 public IP from the environment
           echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
         
       - name: Install msmtp
@@ -76,6 +76,6 @@ jobs:
 
       - name: Send Email
         run: |
-          EC2_PUBLIC_IP=${{ steps.ec2-info.outputs.public_ip }}
+          EC2_PUBLIC_IP=$EC2_PUBLIC_IP  # Retrieve EC2 public IP from the environment
           email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
           echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
