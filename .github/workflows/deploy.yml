@@ -45,7 +45,7 @@ jobs:
       - name: Get EC2 Public IP
         run: |
           public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "::set-output name=EC2_PUBLIC_IP::$public_ip"  # Set it as an environment file
+          echo "::set-output name=public_ip::$public_ip"
 
       - name: Set up SSH Key
         run: |
@@ -68,7 +68,7 @@ jobs:
 
       - name: Create Email Content File
         run: | 
-          EC2_PUBLIC_IP=$(cat EC2_PUBLIC_IP)
+          EC2_PUBLIC_IP=${{ steps.ec2-info.outputs.public_ip }}
           echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
         
       - name: Install msmtp
@@ -76,6 +76,6 @@ jobs:
 
       - name: Send Email
         run: |
-          EC2_PUBLIC_IP=$(cat EC2_PUBLIC_IP)
+          EC2_PUBLIC_IP=${{ steps.ec2-info.outputs.public_ip }}
           email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
           echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
