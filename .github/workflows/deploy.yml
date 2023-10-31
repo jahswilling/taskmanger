@@ -5,9 +5,6 @@ on:
     branches:
       - main
 
-env:
-  EC2_PUBLIC_IP: ''
-
 jobs:
   deploy_cloudformation:
     runs-on: ubuntu-latest
@@ -49,12 +46,7 @@ jobs:
         id: ec2-info
         run: |
           public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "Public IP: $public_ip"
-          if [ -z "$public_ip" ]; then
-            echo "Failed to retrieve the EC2 public IP."
-            exit 1
-          fi
-          echo "EC2_PUBLIC_IP=$public_ip" >> $GITHUB_ENV  # Set it as an environment variable
+          echo "EC2_PUBLIC_IP=$public_ip" >> $GITHUB_ENV  # Set it as a global environment variable
 
   deploy_ansible:
     needs: deploy_cloudformation
@@ -76,7 +68,7 @@ jobs:
 
       - name: Run Ansible Playbook
         run: |
-          echo "EC2 Public IP: ${{ env.EC2_PUBLIC_IP }}"
+          echo "EC2 Public IP: $EC2_PUBLIC_IP"
           ansible-playbook -i ${{ env.EC2_PUBLIC_IP }}, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           if [ $? -ne 0 ]; then
             echo "Ansible playbook execution failed."
@@ -90,7 +82,7 @@ jobs:
     steps:
       - name: Create Email Content File
         run: | 
-          echo "Hello, this is your just deployed IP address: ${{ env.EC2_PUBLIC_IP }}" > email_body.txt
+          echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
         
       - name: Install msmtp
         run: sudo apt-get update && sudo apt-get install -y msmtp
