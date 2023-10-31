@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  EC2_PUBLIC_IP: ''
+
 jobs:
   deploy_cloudformation:
     runs-on: ubuntu-latest
@@ -51,7 +54,7 @@ jobs:
             echo "Failed to retrieve the EC2 public IP."
             exit 1
           fi
-          echo "::set-output name=EC2_PUBLIC_IP::$public_ip"  # Define it as an output
+          echo "::set-env name=EC2_PUBLIC_IP::$public_ip"  # Set it as a global environment variable
 
   deploy_ansible:
     needs: deploy_cloudformation
@@ -72,11 +75,9 @@ jobs:
           fi
 
       - name: Run Ansible Playbook
-        env:
-          EC2_PUBLIC_IP: ${{ needs.deploy_cloudformation.outputs.EC2_PUBLIC_IP }}
         run: |
-          echo "EC2 Public IP: $EC2_PUBLIC_IP"
-          ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          echo "EC2 Public IP: ${{ env.EC2_PUBLIC_IP }}"
+          ansible-playbook -i ${{ env.EC2_PUBLIC_IP }}, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           if [ $? -ne 0 ]; then
             echo "Ansible playbook execution failed."
             exit 1
@@ -89,17 +90,13 @@ jobs:
     steps:
       - name: Create Email Content File
         run: | 
-          echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
-        env:
-          EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+          echo "Hello, this is your just deployed IP address: ${{ env.EC2_PUBLIC_IP }}" > email_body.txt
         
       - name: Install msmtp
         run: sudo apt-get update && sudo apt-get install -y msmtp
 
       - name: Send Email
         run: |
-          EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+          EC2_PUBLIC_IP=${{ env.EC2_PUBLIC_IP }}
           email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
           echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
-        env:
-          EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
