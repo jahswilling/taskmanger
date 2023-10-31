@@ -16,40 +16,42 @@ jobs:
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       - name: Deploy CloudFormation Stack
         run: |
-            aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
-            if [ $? -ne 0 ]; then
-                echo "CloudFormation deployment failed."
-                exit 1
-            fi
+          aws cloudformation deploy --stack-name TaskManagerStack --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM
+          if [ $? -ne 0 ]; then
+            echo "CloudFormation deployment failed."
+            exit 1
+          fi
+
       - name: Wait for EC2 instances to be running
         run: |
-            stack_name="TaskManagerStack"
-            while true; do
-                instances=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=$stack_name" "Name=instance-state-name,Values=running")
-                if [ -n "$instances" ]; then
-                echo "All EC2 instances are running."
-                break
-                else
-                echo "Waiting for EC2 instances to be running..."
-                sleep 30  # Adjust the sleep interval as needed
-                fi
-            done
+          stack_name="TaskManagerStack"
+          while true; do
+            instances=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=$stack_name" "Name=instance-state-name,Values=running")
+            if [ -n "$instances" ]; then
+              echo "All EC2 instances are running."
+              break
+            else
+              echo "Waiting for EC2 instances to be running..."
+              sleep 30  # Adjust the sleep interval as needed
+            fi
+          done
+
       - name: Get EC2 Public IP
         id: ec2-info
         run: |
-            public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-            echo "Public IP: $public_ip"
-            if [ -z "$public_ip" ]; then
-                echo "Failed to retrieve the EC2 public IP."
-                exit 1
-            fi
-            echo "::set-output name=public_ip::$public_ip"
+          public_ip=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=TaskManagerStack" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          echo "Public IP: $public_ip"
+          if [ -z "$public_ip" ]; then
+            echo "Failed to retrieve the EC2 public IP."
+            exit 1
+          fi
+          echo "::set-output name=EC2_PUBLIC_IP::$public_ip"  # Define it as an output
 
   deploy_ansible:
     needs: deploy_cloudformation
@@ -58,27 +60,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        
+
       - name: Set up SSH Key
         id: set-ssh-key
         run: |
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > taskmanager.pem
-            chmod 600 taskmanager.pem
-            if [ ! -f taskmanager.pem ]; then
-                echo "Failed to set up SSH private key."
-                exit 1
-            fi
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > taskmanager.pem
+          chmod 600 taskmanager.pem
+          if [ ! -f taskmanager.pem ]; then
+            echo "Failed to set up SSH private key."
+            exit 1
+          fi
 
       - name: Run Ansible Playbook
         env:
-          EC2_PUBLIC_IP: ${{ needs.deploy_cloudformation.outputs.public_ip }}  
+          EC2_PUBLIC_IP: ${{ needs.deploy_cloudformation.outputs.EC2_PUBLIC_IP }}
         run: |
-            echo "EC2 Public IP: $EC2_PUBLIC_IP"
-            ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [ $? -ne 0 ]; then
-                echo "Ansible playbook execution failed."
-                exit 1
-            fi
+          echo "EC2 Public IP: $EC2_PUBLIC_IP"
+          ansible-playbook -i $EC2_PUBLIC_IP, -u ubuntu deploy_taskmanager.yml --private-key taskmanager.pem --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          if [ $? -ne 0 ]; then
+            echo "Ansible playbook execution failed."
+            exit 1
+          fi
 
   send_email:
     needs: deploy_ansible
@@ -87,16 +89,17 @@ jobs:
     steps:
       - name: Create Email Content File
         run: | 
-            echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
+          echo "Hello, this is your just deployed IP address: $EC2_PUBLIC_IP" > email_body.txt
         env:
-            EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+          EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
         
       - name: Install msmtp
         run: sudo apt-get update && sudo apt-get install -y msmtp
 
       - name: Send Email
         run: |
-            EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
-            echo -e "Subject: $EC2_PUBLIC_IP" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
+          EC2_PUBLIC_IP=${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+          email_body="Hello, this is your just deployed IP address: $EC2_PUBLIC_IP"
+          echo -e "Subject: EC2 IP Address\n$email_body" | msmtp --from=triggerapp.info@gmail.com --host=smtp.gmail.com --port=587 --tls=on --user=triggerapp.info@gmail.com --auth=on --passwordeval="echo ${{ secrets.EMAIL_PASSWORD }}" -t jahswilling@gmail.com
         env:
-            EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
+          EC2_PUBLIC_IP: ${{ needs.deploy_ansible.outputs.EC2_PUBLIC_IP }}
