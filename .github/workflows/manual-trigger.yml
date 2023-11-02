@@ -1,0 +1,27 @@
+name: Manual Triggered Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_to_run:
+        description: 'Job to Run'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Your deployment steps go here
+
+  some-other-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Steps for the other job

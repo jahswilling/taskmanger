@@ -6,13 +6,26 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-docker-image:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t taskmanager:latest .
+          docker tag taskmanager:latest root0877/taskmanager:latest
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+          docker push root0877/taskmanager:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    needs: build-docker-image
+
+    steps:
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
